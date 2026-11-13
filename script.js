@@ -34,27 +34,18 @@ const months = [
 ];
 
 function gestisciVisibilitaCap() {
-    const sL = document.getElementById('selectedOfferLuce');
     const hL = document.getElementById('hasCapLuce');
     const colonnaLuce = hL ? hL.closest('.col') : null;
-    if (sL && hL && colonnaLuce) {
-        if (sL.value !== "") {
-            colonnaLuce.style.display = 'block';
-        } else {
-            colonnaLuce.style.display = 'none';
-            hL.value = 'no';
-        }
+    if (hL && colonnaLuce) {
+        colonnaLuce.style.display = 'none';
+        hL.value = 'no';
     }
-    const sG = document.getElementById('selectedOfferGas');
+
     const hG = document.getElementById('hasCapGas');
     const colonnaGas = hG ? hG.closest('.col') : null;
-    if (sG && hG && colonnaGas) {
-        if (sG.value !== "") {
-            colonnaGas.style.display = 'block';
-        } else {
-            colonnaGas.style.display = 'none';
-            hG.value = 'no';
-        }
+    if (hG && colonnaGas) {
+        colonnaGas.style.display = 'none';
+        hG.value = 'no';
     }
 }
 
