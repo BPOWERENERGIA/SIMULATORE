@@ -159,10 +159,8 @@ document.getElementById('calculator-form').onsubmit = function(e) {
     
     let rHtml = `<div id="report-box" style="padding:30px; border:3px solid #2e7d32; background:white; border-radius:10px; font-family:'Roboto',sans-serif;"><div style="text-align:center; border-bottom:2px solid #eee; padding-bottom:15px; margin-bottom:20px;"><h2 style="color:#2e7d32; margin-bottom:5px;">Simulazione di Risparmio</h2><p style="font-size:1.2em; margin:5px 0;">Cliente: <strong>${utente}</strong></p>${dCap}<p style="font-size:0.95em; color:#d32f2f;"><strong>Scadenza: ${dS}</strong></p></div>`;
     
-    function fRes(vA, et, sA, sN, nO, fr) {
-        // vA è il risparmio annuo calcolato col consumo annuo (Negativo se si risparmia)
-        const vM = vA / 12; 
-        const isR = vA <= 0; // Se <= 0 è un risparmio (costo nuovo < costo attuale)
+    function fRes(vM, vA, et, sA, sN, nO, fr) {
+        const isR = vA <= 0; // Se <= 0 è un risparmio
         const col = isR ? "#1b5e20" : "#d32f2f";
         const bg = isR ? "#f1f8e9" : "#ffebee";
         const bCol = isR ? "green" : "red";
@@ -170,7 +168,7 @@ document.getElementById('calculator-form').onsubmit = function(e) {
         const lbl = isR ? "Proiezione di Risparmio" : "Proiezione di Differenza"; 
         const tP = (fr === 1) ? "Mensile" : "Bimestrale";
         
-        return `<div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid ${bCol}; background: ${bg}; border-radius: 0 5px 5px 0;"><p style="font-size:1.15em; margin: 5px 0; color: ${col}; text-transform: uppercase;"><strong>${et}</strong></p><div style="font-size:0.95em; color: #444; margin-bottom: 10px;"><p style="margin: 2px 0;">Attuale (${tP}): <strong>€ ${sA.toFixed(2)}</strong></p><p style="margin: 2px 0;">Con ${nO} (${tP}): <strong>€ ${sN.toFixed(2)}</strong></p></div><div style="border-top: 1px dotted #ccc; padding-top: 10px;"><p style="font-size:1.05em; margin: 3px 0;">${lbl} Mensile: <strong style="color:${bCol};">€ ${seg}${Math.abs(vM).toFixed(2)}</strong></p><p style="font-size:1.05em; margin: 3px 0;">${lbl} Annuo: <strong style="color:${bCol};">€ ${seg}${Math.abs(vA).toFixed(2)}</strong></p></div></div>`;
+        return `<div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid ${bCol}; background: ${bg}; border-radius: 0 5px 5px 0;"><p style="font-size:1.15em; margin: 5px 0; color: ${col}; text-transform: uppercase;"><strong>${et}</strong></p><div style="font-size:0.95em; color: #444; margin-bottom: 10px;"><p style="margin: 2px 0;">Attuale (${tP}): <strong>€ ${sA.toFixed(2)}</strong></p><p style="margin: 2px 0;">Con ${nO} (${tP}): <strong>€ ${sN.toFixed(2)}</strong></p></div><div style="border-top: 1px dotted #ccc; padding-top: 10px;"><p style="margin: 3px 0; font-size: 1.05em;">${lbl} Mensile: <strong style="color:${bCol};">€ ${seg}${Math.abs(vM).toFixed(2)}</strong></p><p style="margin: 3px 0; font-size: 1.05em;">${lbl} Annuo: <strong style="color:${bCol};">€ ${seg}${Math.abs(vA).toFixed(2)}</strong></p></div></div>`;
     }
     
     if (utility === 'light' || utility === 'lightAndGas') {
@@ -196,17 +194,23 @@ document.getElementById('calculator-form').onsubmit = function(e) {
         cE += (cT * sE);
         if (hL) { cE_WorstCase = cT * (LIM_L + sE); }
 
-        let sAt = sP + (pP * fr);
-        let sUG = cE + (pcv * fr);
+        let sAt = sP + (pP * fr); // Costo inserito dall'utente per il periodo
+        let sUG = cE + (pcv * fr); // Costo nuova offerta per il periodo
         
-        // La tua formula originale ripristinata: (Costo Attuale - Costo Nuovo) diviso il consumo del periodo, moltiplicato per il consumo annuo
+        // 1. Risparmio Mensile: Differenza secca (Attuale - Nuovo) normalizzata su base mensile
+        let diffPeriodo = sAt - sUG;
+        let svM = -((diffPeriodo / fr)); 
+
+        // 2. Risparmio Annuo: Proporzionale al consumo annuo inserito
         let svA = -(((sAt - sUG) / (cT || 1)) * ann);
 
         totSave += svA; 
-        rHtml += fRes(svA, "⚡ Fornitura Luce", sAt, sUG, nL, fr);
+        rHtml += fRes(svM, svA, "⚡ Fornitura Luce", sAt, sUG, nL, fr);
         
         if (hL) {
             let sUG_Worst = cE_WorstCase + (pcv * fr);
+            let diffPeriodo_Worst = sAt - sUG_Worst;
+            let svM_Worst = -((diffPeriodo_Worst / fr));
             let svA_Worst = -(((sAt - sUG_Worst) / (cT || 1)) * ann);
             let isWorstSave = svA_Worst <= 0;
             let colWorst = isWorstSave ? "green" : "red";
@@ -235,14 +239,17 @@ document.getElementById('calculator-form').onsubmit = function(e) {
         let sAt = sP + (pP * fr);
         let sUG = cG + (pcvGas * fr);
         
-        // La tua formula originale ripristinata per il gas
+        let diffPeriodo = sAt - sUG;
+        let svM = -((diffPeriodo / fr));
         let svA = -(((sAt - sUG) / (cT || 1)) * ann);
 
         totSave += svA; 
-        rHtml += fRes(svA, "🔥 Fornitura Gas", sAt, sUG, nG, fr);
+        rHtml += fRes(svM, svA, "🔥 Fornitura Gas", sAt, sUG, nG, fr);
         
         if (hG) {
             let sUG_Worst = cG_WorstCase + (pcvGas * fr);
+            let diffPeriodo_Worst = sAt - sUG_Worst;
+            let svM_Worst = -((diffPeriodo_Worst / fr));
             let svA_Worst = -(((sAt - sUG_Worst) / (cT || 1)) * ann);
             let isWorstSaveGas = svA_Worst <= 0;
             let colWorstGas = isWorstSaveGas ? "green" : "red";
@@ -254,7 +261,6 @@ document.getElementById('calculator-form').onsubmit = function(e) {
     }
 
     let tSt = "", tTx = "";
-    // totSave è negativo se c'è un risparmio complessivo
     if (totSave < 0) { 
         tSt = "background:#2e7d32; color:white;"; 
         tTx = `RISPARMIO ANNUO STIMATO<br><span style='font-size:2.5em; font-weight:bold;'>€ -${Math.abs(totSave).toFixed(2)}</span>`; 
