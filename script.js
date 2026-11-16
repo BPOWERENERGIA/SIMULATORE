@@ -105,7 +105,6 @@ function updateOffersDropdown() {
             if (opt.value === "") return;
             const conf = OFFERTE_CONFIG[opt.value];
             if (conf && conf.segment === t) {
-                // Controllo soglia consumo per Be Strong Gas (>= 3500 smc)
                 if (opt.value === 'beStrongGas' && annGas < 3500) {
                     opt.style.display = 'none';
                     opt.disabled = true;
@@ -161,7 +160,16 @@ document.getElementById('calculator-form').onsubmit = function(e) {
     let rHtml = `<div id="report-box" style="padding:30px; border:3px solid #2e7d32; background:white; border-radius:10px; font-family:'Roboto',sans-serif;"><div style="text-align:center; border-bottom:2px solid #eee; padding-bottom:15px; margin-bottom:20px;"><h2 style="color:#2e7d32; margin-bottom:5px;">Simulazione di Risparmio</h2><p style="font-size:1.2em; margin:5px 0;">Cliente: <strong>${utente}</strong></p>${dCap}<p style="font-size:0.95em; color:#d32f2f;"><strong>Scadenza: ${dS}</strong></p></div>`;
     
     function fRes(vA, et, sA, sN, nO, fr) {
-        const vM = vA / 12, isR = vA >= 0, col = isR ? "#1b5e20" : "#d32f2f", bg = isR ? "#f1f8e9" : "#ffebee", bCol = isR ? "green" : "red", seg = isR ? "-" : "+", lbl = isR ? "Proiezione di Risparmio" : "Proiezione di Differenza", tP = (fr === 1) ? "Mensile" : "Bimestrale";
+        // vA è il risparmio annuo calcolato col consumo annuo (Negativo se si risparmia)
+        const vM = vA / 12; 
+        const isR = vA <= 0; // Se <= 0 è un risparmio (costo nuovo < costo attuale)
+        const col = isR ? "#1b5e20" : "#d32f2f";
+        const bg = isR ? "#f1f8e9" : "#ffebee";
+        const bCol = isR ? "green" : "red";
+        const seg = isR ? "-" : "+"; 
+        const lbl = isR ? "Proiezione di Risparmio" : "Proiezione di Differenza"; 
+        const tP = (fr === 1) ? "Mensile" : "Bimestrale";
+        
         return `<div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid ${bCol}; background: ${bg}; border-radius: 0 5px 5px 0;"><p style="font-size:1.15em; margin: 5px 0; color: ${col}; text-transform: uppercase;"><strong>${et}</strong></p><div style="font-size:0.95em; color: #444; margin-bottom: 10px;"><p style="margin: 2px 0;">Attuale (${tP}): <strong>€ ${sA.toFixed(2)}</strong></p><p style="margin: 2px 0;">Con ${nO} (${tP}): <strong>€ ${sN.toFixed(2)}</strong></p></div><div style="border-top: 1px dotted #ccc; padding-top: 10px;"><p style="font-size:1.05em; margin: 3px 0;">${lbl} Mensile: <strong style="color:${bCol};">€ ${seg}${Math.abs(vM).toFixed(2)}</strong></p><p style="font-size:1.05em; margin: 3px 0;">${lbl} Annuo: <strong style="color:${bCol};">€ ${seg}${Math.abs(vA).toFixed(2)}</strong></p></div></div>`;
     }
     
@@ -188,11 +196,19 @@ document.getElementById('calculator-form').onsubmit = function(e) {
         cE += (cT * sE);
         if (hL) { cE_WorstCase = cT * (LIM_L + sE); }
 
-        let sAt = sP + (pP * fr), sUG = cE + (pcv * fr), svA = ((sAt - sUG) / (cT || 1)) * ann; totSave += svA; rHtml += fRes(svA, "⚡ Fornitura Luce", sAt, sUG, nL, fr);
+        let sAt = sP + (pP * fr);
+        let sUG = cE + (pcv * fr);
+        
+        // La tua formula originale ripristinata: (Costo Attuale - Costo Nuovo) diviso il consumo del periodo, moltiplicato per il consumo annuo
+        let svA = -(((sAt - sUG) / (cT || 1)) * ann);
+
+        totSave += svA; 
+        rHtml += fRes(svA, "⚡ Fornitura Luce", sAt, sUG, nL, fr);
         
         if (hL) {
-            let sUG_Worst = cE_WorstCase + (pcv * fr), svA_Worst = ((sAt - sUG_Worst) / (cT || 1)) * ann;
-            let isWorstSave = svA_Worst >= 0;
+            let sUG_Worst = cE_WorstCase + (pcv * fr);
+            let svA_Worst = -(((sAt - sUG_Worst) / (cT || 1)) * ann);
+            let isWorstSave = svA_Worst <= 0;
             let colWorst = isWorstSave ? "green" : "red";
             let descWorst = isWorstSave 
                 ? `In caso di forti rincari di mercato sopra i 0,200 €/kWh, avrai un risparmio stimato di <strong style="color: ${colWorst};">€ -${Math.abs(svA_Worst).toFixed(2)}</strong>`
@@ -216,11 +232,19 @@ document.getElementById('calculator-form').onsubmit = function(e) {
         cG += (cT * sEGas);
         if (hG) { cG_WorstCase = cT * (LIM_G + sEGas); }
 
-        let sAt = sP + (pP * fr), sUG = cG + (pcvGas * fr), svA = ((sAt - sUG) / (cT || 1)) * ann; totSave += svA; rHtml += fRes(svA, "🔥 Fornitura Gas", sAt, sUG, nG, fr);
+        let sAt = sP + (pP * fr);
+        let sUG = cG + (pcvGas * fr);
+        
+        // La tua formula originale ripristinata per il gas
+        let svA = -(((sAt - sUG) / (cT || 1)) * ann);
+
+        totSave += svA; 
+        rHtml += fRes(svA, "🔥 Fornitura Gas", sAt, sUG, nG, fr);
         
         if (hG) {
-            let sUG_Worst = cG_WorstCase + (pcvGas * fr), svA_Worst = ((sAt - sUG_Worst) / (cT || 1)) * ann;
-            let isWorstSaveGas = svA_Worst >= 0;
+            let sUG_Worst = cG_WorstCase + (pcvGas * fr);
+            let svA_Worst = -(((sAt - sUG_Worst) / (cT || 1)) * ann);
+            let isWorstSaveGas = svA_Worst <= 0;
             let colWorstGas = isWorstSaveGas ? "green" : "red";
             let descWorstGas = isWorstSaveGas 
                 ? `In caso di forti rincari di mercato sopra i 0,95 €/smc, avrai un risparmio stimato di <strong style="color: ${colWorstGas};">€ -${Math.abs(svA_Worst).toFixed(2)}</strong>`
@@ -228,10 +252,20 @@ document.getElementById('calculator-form').onsubmit = function(e) {
             rHtml += `<div style="margin-top: -15px; margin-bottom: 20px; padding: 10px 15px; border-left: 4px solid ${colWorstGas}; background: ${isWorstSaveGas ? '#e8f5e9' : '#ffebee'}; border-radius: 0 5px 5px 0; font-size: 0.9em;"><p style="margin: 2px 0; color: ${isWorstSaveGas ? '#1b5e20' : '#d32f2f'};">🛡️ <strong>Scenario di picco (PSV ad un anno ≥ CAP):</strong></p><p style="margin: 2px 0; color: #444;">${descWorstGas}</p></div>`;
         }
     }
+
     let tSt = "", tTx = "";
-    if (totSave > 0) { tSt = "background:#2e7d32; color:white;"; tTx = `RISPARMIO ANNUO STIMATO<br><span style='font-size:2.5em; font-weight:bold;'>€ -${Math.abs(totSave).toFixed(2)}</span>`; }
-    else if (totSave < 0) { tSt = "background:#d32f2f; color:white;"; tTx = `DIFFERENZA ANNUALE<br><span style='font-size:2.5em; font-weight:bold;'>+€ ${Math.abs(totSave).toFixed(2)}</span>`; }
-    else { tSt = "background:#757575; color:white;"; tTx = `RISPARMIO ANNUO<br><span style='font-size:2.5em; font-weight:bold;'>€ 0.00</span>`; }
+    // totSave è negativo se c'è un risparmio complessivo
+    if (totSave < 0) { 
+        tSt = "background:#2e7d32; color:white;"; 
+        tTx = `RISPARMIO ANNUO STIMATO<br><span style='font-size:2.5em; font-weight:bold;'>€ -${Math.abs(totSave).toFixed(2)}</span>`; 
+    } else if (totSave > 0) { 
+        tSt = "background:#d32f2f; color:white;"; 
+        tTx = `DIFFERENZA ANNUALE<br><span style='font-size:2.5em; font-weight:bold;'>+€ ${Math.abs(totSave).toFixed(2)}</span>`; 
+    } else { 
+        tSt = "background:#757575; color:white;"; 
+        tTx = `RISPARMIO ANNUO<br><span style='font-size:2.5em; font-weight:bold;'>€ 0.00</span>`; 
+    }
+    
     rHtml += `<div style="${tSt} padding:20px; text-align:center; border-radius:8px; margin-top:20px;"><span style='text-transform:uppercase; font-size:0.9em;'>${tTx}</span></div></div>`;
     document.getElementById('result').innerHTML = rHtml; document.getElementById('result').style.display = 'block';
     document.getElementById('export-actions').classList.remove('hidden'); document.getElementById('export-actions').style.display = 'block';
